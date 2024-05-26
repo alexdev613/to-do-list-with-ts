@@ -5,7 +5,7 @@ function App() {
   const [tasks, setTasks] = useState([
     'Estudar React com TypeScript',
     'Comprar pão meio dia',
-    'Estudadr inglês a noite'
+    'Estudar inglês a noite'
   ]);
 
   function handleRegister() {
@@ -18,6 +18,12 @@ function App() {
     setTasks(ourTasks => [...ourTasks, input]);
     setInput('');
   }
+
+  function handleDelete(index: number) {
+    const removeTask = tasks.filter( (_task, i)=> i !== index );
+    console.log(removeTask);
+    setTasks(removeTask);
+  } // (**)
 
   return (
     <div>
@@ -32,9 +38,12 @@ function App() {
       <h4>{input}</h4>
       <hr />
 
-      <ul>{tasks.map((task, index) => (
-        <li key={index}>{task}</li>
-      ))}</ul>
+      {tasks.map((task, index) => (
+        <ul key={index}>
+          <li>{task}</li>
+          <button onClick={ () => handleDelete(index) }>Excluir</button>
+        </ul>
+      ))}
     </div>
   )
 }
@@ -51,4 +60,19 @@ export default App
     setTasks(ourTasks => [...ourTasks, input]);
   
   É só um jeito diferente de fazer setTasks([...tasks, input]);
+*/
+
+/*
+  (**) Poderíamos construir a função handleDelete() pegando o valor do item/task assim:
+
+  function handleDelete(item: string) {
+    const removeTask = tasks.filter( task => task !== item);
+    setTasks(removeTask);
+  }
+
+  // Porém, se tivermos um mesmo texto em dois item, se apagarmos aparagará os dois itens com texto igual.
+  // Assim também poderíamos deixar nossa key <ul key={task}> ao invés de <ul key={index}>, se um usuário
+  // repetisse por engano uma tarefa teríamos um erro por ter duas keys iguais, tendo um caso de key não única,
+  // por isso escolhemos usar o index ao invés de task para a key assim como decidimos usar index para pegar
+  // a posição do item que queremos deletar na função handleDelete!
 */
