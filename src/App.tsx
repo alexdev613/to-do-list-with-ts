@@ -6,6 +6,9 @@ function App() {
 
   const inputRef = useRef<HTMLInputElement>(null); // useRef para input
 
+  const firstRender = useRef(true); // (y¹)
+
+
   const [editTask, setEditTask] = useState({
     enabled: false,
     task: '',
@@ -19,6 +22,17 @@ function App() {
     }
 
   }, []); // (x¹) // (x⁵)
+
+  useEffect(() => {
+
+    if(firstRender.current) {
+      firstRender.current = false;
+      return;
+    } // (y²)
+
+    localStorage.setItem("@todolist-ts", JSON.stringify(tasks));
+  
+  }, [tasks]); // (y³)
 
   function handleRegister() {
     if(!input) {
@@ -35,7 +49,7 @@ function App() {
     setTasks(ourTasks => [...ourTasks, input]);
     setInput('');
 
-    localStorage.setItem("@todolist-ts", JSON.stringify([...tasks, input])); // (x²)
+    // localStorage.setItem("@todolist-ts", JSON.stringify([...tasks, input])); // (x²)
   
   };
 
@@ -54,7 +68,7 @@ function App() {
 
     setInput(''); // Para limpar o campo
 
-    localStorage.setItem('@todolist-ts', JSON.stringify(allTasks)); // (x³)
+    // localStorage.setItem('@todolist-ts', JSON.stringify(allTasks)); // (x³)
 
   }
 
@@ -64,7 +78,7 @@ function App() {
     console.log(removeTask);
     setTasks(removeTask);
 
-    localStorage.setItem("@todolist-ts", JSON.stringify(removeTask)); // (x⁴)
+    // localStorage.setItem("@todolist-ts", JSON.stringify(removeTask)); // (x⁴)
 
   } // (**)
 
@@ -245,5 +259,85 @@ export default App
 
   // Com isto, quando o nosso componente for montado, se houver algo na nossa chave "todolist-ts" salvo, teremos
   // acesso na nossa aplicação seguindo a lógica que construimos até agora!
+
+*/
+
+/*
+    Como vimos, chamamos o nosso localStorage em 3 funções para salvar nosso useState tasks a cada alteração do mesmo!
+    Mas com o useRef e um useEffect podemos chamar o localStorage uma única vez para salvar no localStorage nas três
+    situações em que mudamos o nosso array do useState tasks, a saber: quando adicionamos uma task/item no array,
+    quando editamos uma task/item do array ou quando deletamos uma task/item do array!
+
+    Criando uma useEffect assim:
+
+    useEffect(() => {
+      localStorage.setItem("@todolist-ts", JSON.stringfy(tasks)); // * então...
+
+    }, [tasks]); // temos a dependência tasks no array de dependências do useEffect
+    // Isso quer dizer que toda vez que o useState tasks for alterado eu chamo a função anônima do meu useEffect
+
+    // * ... então... eu quero salvar nossas tarefas no localStorage toda vez que tasks for alterado!
+    // Só que dessa forma, sem usar um useRef vai acontecer isto: nós podemos criar tarefas/itens no nosso
+    // array do useState tasks, como editar ou deletar que isso vai ser salvo no nosso localStorage, mas se
+    // atualizarmos a página a nossa aplicação não renderiza mais nossas tarefas, assim como nosso localStorage
+    // é zerado! Isto acontece porque o React não tem uma ordem de qual useEffect ele executará primeiro quando o
+    // componentefor montado.
+
+    // Repare que crimaos dois useEffects
+
+    useEffect(() => {
+      const tarefasSalvas = localStorage.getItem("@todolist-ts");
+
+      if(tarefasSalvas) {
+        setTasks(JSON.parse(tarefasSalvas));
+      }
+
+    }, []); // => para buscar as tarefas e colocar na nossa lista do useState tasks
+
+    useEffect(() => {
+
+      localStorage.setItem("@todolist-ts", JSON.stringify(tasks));
+    
+    }, [tasks]); // => e para salvar no localStorage quando nossa lista do useState tasks for alterada
+
+    // Porém se o  2º useEffect executar primeiro o 1º useEffect vai preencher a lista vazia, pois o 2º useEffect
+    // não tem nada dentro dele.
+    // Então para fazer com que o 2º useEffect  execute somente quando o array do useState tasks for alterado,
+    // usaremos um useRef:
+
+  // (y¹) const firstRender = useRef(true); // Ele começa como true, com a 1ª renderização
+
+  // 1º useEffect para buscar as tarefas no localStorage e passar para o useState tasks:
+
+  useEffect(() => {
+    const tarefasSalvas = localStorage.getItem("@todolist-ts");
+
+    if(tarefasSalvas) {
+      setTasks(JSON.parse(tarefasSalvas));
+    }
+
+  }, []);
+
+  useEffect(() => {
+
+    if(firstRender.current) { // (y²) se firstRender.current = true (primeira renderização) => entre no bloco do if
+
+      firstRender.current = false; // (y²) passe firstRender.current para false
+      return; // (y²) parar a execução desta função anônima
+    }
+
+    localStorage.setItem("todolist-ts", JSON.stringfy(tasks));
+
+  }, [tasks]); // (y³) => Então caso a nossa useState tasks sofra alguma alteração...
+
+  // ...ela vai chamar o useEffect novamente e vai verificar se firstRender.current = true
+  // constatará que não é a primeira vez que o componente foi montado pois firstRender.current = false
+  // logo nosso if é ignorado e dá-se a continuação da execução da função anônima, e a linha:
+
+  // localStorage.setItem("todolist-ts", JSON.stringfy(tasks));
+  // salva a alteração feita no useState tasks no localStorage.
+
+  // Então é desse jeito que impedimos a chamada do nosso useEffect na primeira renderização (quando o componente
+  // é montado) utilizando o hook useRef.
 
 */
