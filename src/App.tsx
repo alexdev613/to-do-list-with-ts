@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 function App() {
   const [input, setInput] = useState("");
@@ -34,24 +34,43 @@ function App() {
   
   }, [tasks]); // (y³)
 
-  function handleRegister() {
+
+  const handleRegister = useCallback(() => { // (xyz¹)
     if(!input) {
       alert("Preencha o nome da sua tarefa!");
-      return; // Para evitar loop infinito
+      return;
     }
 
-    if(editTask.enabled) { // se editTask == true vamos editar
+    if(editTask.enabled) {
       handleSaveEdit();
-      return; // Para evitar loop infinito
+      return;
     }
   
-    // setTasks([...tasks, input]); /*(*)*/
     setTasks(ourTasks => [...ourTasks, input]);
     setInput('');
 
-    // localStorage.setItem("@todolist-ts", JSON.stringify([...tasks, input])); // (x²)
+  }, [input, tasks]);
+
+
+  // function handleRegister() {
+  //   if(!input) {
+  //     alert("Preencha o nome da sua tarefa!");
+  //     return; // Para evitar loop infinito
+  //   }
+
+  //   if(editTask.enabled) { // se editTask == true vamos editar
+  //     handleSaveEdit();
+  //     return; // Para evitar loop infinito
+  //   }
   
-  };
+  //   // setTasks([...tasks, input]); /*(*)*/
+  //   setTasks(ourTasks => [...ourTasks, input]);
+  //   setInput('');
+
+  //   // localStorage.setItem("@todolist-ts", JSON.stringify([...tasks, input])); // (x²)
+  
+  // };
+
 
   function handleSaveEdit() {
     const findIndexTask = tasks.findIndex(task => task === editTask.task); // (***)
@@ -93,6 +112,10 @@ function App() {
 
   }
 
+  const totalTarefas = useMemo(() => {
+    return tasks.length;
+  }, [tasks]); // (z¹)
+
   return (
     <div>
       <h1>Lista de Tarefas (Hello World)</h1>
@@ -108,6 +131,9 @@ function App() {
       </button>
 
       <br /><br /><hr />
+
+      <strong>Você tem {totalTarefas} tarefas!</strong>
+      <br /><br />
 
       {tasks.map((task, index) => (
         <ul key={index}>
@@ -339,5 +365,127 @@ export default App
 
   // Então é desse jeito que impedimos a chamada do nosso useEffect na primeira renderização (quando o componente
   // é montado) utilizando o hook useRef.
+
+*/
+
+/*
+  // (z¹) => useMemo é um hook que serve para quando queremos evitar perda de performance e memorizar valores,
+  // cálculos e etc, para evitar renderizações desnecessárias!
+
+  // Vamos pensar em um elemento que nos trará a quantidade de listas que temos na nossa lista do useState tasks:
+
+  <strong>Você tem {tasks.length} tarefas!</strong>
+
+  // Só que levemos em consideração do porquê usar o useMemo:
+
+  // Há um fato que toda vez que fazemos uma manipulação, como exemplo: quando digitamos uma letra no input, e como
+  // setamos um evento no onChange do campo/input com o setInput do useState input, para que toda vez que algo for
+  // digitado no campo o setInput atualiza o useState do input trocando o seu valor, e daí o React "rerrenderiza" tudo
+  // o que há dentro do return().
+
+  // Só que como é algo muito singelo e que não consome tanta memória nesse caso, não conseguimos perceber, e neste caso
+  // de uso quase não tem perda de performance, mas se for algo que envolva cálculos complexos com várias manipulações poderíamos
+  // ter uma considerável perda de performance e daí que entra o useMemo!
+
+  // E então podemos utilizar o useMemo para memorizar valores, para só "rerenderizar" caso haja a mundança de uma useState,
+  // ou por exemplo, para fazer cálculos para formatação de moedas em um conversor!
+  
+  // E para utilizar o useMemo precisamos importá-lo:
+  import { useState, useEffect, useRef, useMemo } from "react";
+
+  // (z¹) => criar a função com a lógica:
+
+  const totalTarefas = useMemo(() => { // o useMemo recebe uma função anônima e um array de dependências
+
+    return tasks.length; // aqui pedi para ele retornar a quantidade/tamanho de tarefas que tenho na lista
+  
+  }, [tasks]); // e dentro do array de dependências eu coloco a dependência que quando alterada chame este useMemo,
+  // no caso o useState tasks. Então toda vez que a useState tasks sofrer alguma alteração o que estiver dentro da
+  // função anônima do useMemo é executado.
+
+  // RESUMINDO: Então toda vez que ocorrer alguma alteração na(s) dependência(s) que colocamos dentro do array de dependências
+  // do useMemo, o useMemo vai renderizar a função anônima que passamos dentro do useMemo.
+
+  // Então ao invés de <strong>Você tem {tasks.length} tarefas!</strong>
+
+  // Posso chamar:
+
+  <strong>Você tem {totalTarefas} tarefas!</strong>
+
+  // Então, somente quando a useState tasks for modificada é que a função anônima do useMemo será renderizada novamente!
+  // E o return tasks.length; será renderizado, e sem o useMemo, apenas com <strong>Você tem {tasks.length} tarefas!</strong>
+  // padrão, a renderização desse tasks.length seria chamada toda vez que algo fosse digitado dentro do campo/input
+  // pois seria disparado o evento onChange!
+
+  // Então o useMemo tem esta função, de evitar a perda de performance da aplicação evitando renderizações desnecessárias!
+
+*/
+
+/*
+  // (xyz¹) => Usando o useCallback:
+
+  // O useCallback é bem parecido com o useMemo, ele é uado para evitar que renderizações desnecessárias sejam
+  // feitas, porém também serve para evitar fazer um cash em uma função, e também só deixa que essa função seja
+  // renderizada novamente quando alguma dependência do array de dependência for modificada!
+
+  // Vamos usar o userCallback para controlar nossa função handleRegister! Que é a função de adicionar ou chamar a função
+  // de salvar uma edição em uma tarefa! Então nossa handleRegister tem duas dependências, a input e a tasks:
+  
+  function handleRegister() {
+    if(!input) {
+      alert("preencha o nome da sua tarefa!");
+      return;
+    }
+
+    if(editTask.enabled) {
+      handleSaveEdit();
+      return;
+    }
+
+    setTasks(ourTasks => [...ourTasks, input]); // => tem os valores digitados no input, e os itens adicionados no array da useState tasks
+    setInput("");
+  }
+
+  // Só que se eu excluir uma tarefa na nossa lista, não faz sentido a função handleRegister ser "rerrenderizada"
+  // no nosso componente! Assim como não faz sentido que outra função externa e que nosso handleRegister não tenha
+  // relação alguma e uma outra useState mudar ter que recriar na memória a função handleRegister, então é para este
+  // caso que usamos o useCallback! Para evitar fazer cash da função e rerrenderizações desnecessárias...
+
+  // Pois toda vez que excluimos uma tarefa da lista, tudo o que estiver no return é "rerrenderizado" e também
+  // é feito o cash de todas as aplicações, ou seja, é realocado na memória as funções que são chamadas dentro do
+  // return() do nosso componente! E não faz sentido que o handleRegister seja realocado na memória quando excluimos
+  // uma tarefa! E sim apenas quando alguma dependência que eu passar no handleRegister  sofra alteração! 
+  // Então o useCallback é utilizado para evitar perca de performance e otimizar nossa aplicação.
+
+  // Então para utilizar o useCallback eu devo importá-lo:
+
+  import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+
+  // E criar uma variável que recebe o useCallback, que recebe uma função anônima onde coloco a lógica que quero
+  // passar, e um array de dependências onde vou passar as dependências que quero que quando modificadas chamem a
+  // função anônima do useCallback!
+
+    const handleRegister = useCallback(() => {
+      if(!input) {
+        alert("Preencha o nome da sua tarefa!");
+        return;
+      }
+
+      if(editTask.enabled) {
+        handleSaveEdit();
+        return;
+      }
+    
+      setTasks(ourTasks => [...ourTasks, input]);
+      setInput('');
+
+    }, [input, tasks]);
+
+  // Aqui eu chamei a const com o nome da função handleRegister e passei exatamente o que continha nela dentro
+  // da função anônima do useCallback, e no array de dependências passei as dependênciuas que realmente importam
+  // para a lógica da função, para que ela seja chamada apenas quando uma dessas dependências sejam modificadas!
+
+  // Então esta função anônima da const handleRegister só será realocada dentro da memória quando as denpendências
+  // do array de dependências sofrerem uma alteração!
 
 */
